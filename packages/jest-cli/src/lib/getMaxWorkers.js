@@ -16,7 +16,21 @@ const getMaxWorkers = (argv: Object): number => {
   if (argv.runInBand) {
     return 1;
   } else if (argv.maxWorkers) {
-    return parseInt(argv.maxWorkers, 10);
+    const parsed = parseInt(argv.maxWorkers, 10);
+
+    if (
+      typeof argv.maxWorkers === 'string' &&
+      argv.maxWorkers.trim().endsWith('%') &&
+      parsed > 0 &&
+      parsed <= 100
+    ) {
+      const cpus = os.cpus().length;
+      const workers = Math.floor(parsed / 100 * cpus);
+
+      return workers >= 1 ? workers : 1;
+    }
+
+    return parsed;
   } else {
     const cpus = os.cpus().length;
     return Math.max(argv.watch ? Math.floor(cpus / 2) : cpus - 1, 1);

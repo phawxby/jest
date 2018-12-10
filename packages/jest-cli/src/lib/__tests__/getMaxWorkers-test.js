@@ -25,6 +25,11 @@ describe('getMaxWorkers', () => {
     expect(getMaxWorkers(argv)).toBe(8);
   });
 
+  it('Returns the `maxWorkers` based on %', () => {
+    const argv = {maxWorkers: '50%'};
+    expect(getMaxWorkers(argv)).toBe(2);
+  });
+
   it('Returns based on the number of cpus', () => {
     expect(getMaxWorkers({})).toBe(3);
     expect(getMaxWorkers({watch: true})).toBe(2);
