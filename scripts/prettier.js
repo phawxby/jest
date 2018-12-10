@@ -60,14 +60,19 @@ Object.keys(config).forEach(key => {
     if (isWindows) {
       for (const file of files) {
         const args = Object.keys(defaultOptions)
-          .map(key => `--${key}=${(options && options[key]) || defaultOptions[key]}`)
+          .map(
+            key =>
+              `--${key}=${(options && options[key]) || defaultOptions[key]}`
+          )
           .concat(`--${shouldWrite ? 'write' : 'l'}`, file);
 
         runCommand(prettierCmd, args, path.resolve(__dirname, '..'));
       }
     } else {
       const args = Object.keys(defaultOptions)
-        .map(key => `--${key}=${(options && options[key]) || defaultOptions[key]}`)
+        .map(
+          key => `--${key}=${(options && options[key]) || defaultOptions[key]}`
+        )
         .concat(`--${shouldWrite ? 'write' : 'l'}`, files);
 
       runCommand(prettierCmd, args, path.resolve(__dirname, '..'));
