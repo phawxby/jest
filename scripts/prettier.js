@@ -56,12 +56,22 @@ Object.keys(config).forEach(key => {
     : `${patterns.join(',')}*.js`;
   const files = glob.sync(globPattern, {ignore});
 
-  const args = Object.keys(defaultOptions)
-    .map(key => `--${key}=${(options && options[key]) || defaultOptions[key]}`)
-    .concat(`--${shouldWrite ? 'write' : 'l'}`, files);
-
   try {
-    runCommand(prettierCmd, args, path.resolve(__dirname, '..'));
+    if (isWindows) {
+      for (const file of files) {
+        const args = Object.keys(defaultOptions)
+          .map(key => `--${key}=${(options && options[key]) || defaultOptions[key]}`)
+          .concat(`--${shouldWrite ? 'write' : 'l'}`, file);
+
+        runCommand(prettierCmd, args, path.resolve(__dirname, '..'));
+      }
+    } else {
+      const args = Object.keys(defaultOptions)
+        .map(key => `--${key}=${(options && options[key]) || defaultOptions[key]}`)
+        .concat(`--${shouldWrite ? 'write' : 'l'}`, files);
+
+      runCommand(prettierCmd, args, path.resolve(__dirname, '..'));
+    }
   } catch (e) {
     console.log(e);
     if (!shouldWrite) {
