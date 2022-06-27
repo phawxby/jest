@@ -9,23 +9,65 @@
 import type {TestContext} from '@jest/test-result';
 import {makeGlobalConfig, makeProjectConfig} from '@jest/test-utils';
 import {TestWatcher} from 'jest-watcher';
+import * as jestWorker from 'jest-worker';
 import TestRunner from '../index';
+
+jest.mock('../testWorker', () => {});
+const jestWorkerSpy = jest.spyOn(jestWorker, 'Worker');
 
 let mockWorkerFarm;
 
-jest.mock('jest-worker', () => ({
-  Worker: jest.fn(
-    worker =>
-      (mockWorkerFarm = {
-        end: jest.fn().mockResolvedValue({forceExited: false}),
-        getStderr: jest.fn(),
-        getStdout: jest.fn(),
-        worker: jest.fn((data, callback) => require(worker)(data, callback)),
-      }),
-  ),
-}));
+beforeEach(() => {
+  jestWorkerSpy.mockImplementation(worker => {
+    return (mockWorkerFarm = {
+      end: jest.fn().mockResolvedValue({forceExited: false}),
+      getStderr: jest.fn(),
+      getStdout: jest.fn(),
+      worker: jest.fn((data, callback) => require(worker)(data, callback)),
+    });
+  });
+});
 
-jest.mock('../testWorker', () => {});
+test('handles constructor exception', async () => {
+  jestWorkerSpy.mockRejectedValue(new Error('Oh no!'));
+
+  const globalConfig = makeGlobalConfig({maxWorkers: 2, watch: false});
+  const config = makeProjectConfig({rootDir: '/path/'});
+  const context = {config} as TestContext;
+
+  await expect(() =>
+    new TestRunner(globalConfig, {}).runTests(
+      [{context, path: './file.test.js'}],
+      new TestWatcher({isWatchMode: globalConfig.watch}),
+      {serial: true},
+    ),
+  ).rejects.toThrowError();
+});
+
+test('handles worker exception', async () => {
+  jestWorkerSpy.mockImplementation(worker => {
+    return (mockWorkerFarm = {
+      end: jest.fn().mockResolvedValue({forceExited: false}),
+      getStderr: jest.fn(),
+      getStdout: jest.fn(),
+      worker: jest.fn(() => {
+        throw new Error('Oh no!');
+      }),
+    });
+  });
+
+  const globalConfig = makeGlobalConfig({maxWorkers: 2, watch: false});
+  const config = makeProjectConfig({rootDir: '/path/'});
+  const context = {config} as TestContext;
+
+  await expect(() =>
+    new TestRunner(globalConfig, {}).runTests(
+      [{context, path: './file.test.js'}],
+      new TestWatcher({isWatchMode: globalConfig.watch}),
+      {serial: true},
+    ),
+  ).rejects.toThrowError();
+});
 
 test('injects the serializable module map into each worker in watch mode', async () => {
   const globalConfig = makeGlobalConfig({maxWorkers: 2, watch: true});
